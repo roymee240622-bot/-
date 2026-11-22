@@ -114,7 +114,25 @@ var SEED=[
 var ICONS=['🥥','🍯','🍌','🍘','🍮','🍡','🍪','🥮','🍠','🍰'];
 var items=load(),filter='ทั้งหมด',editId=null;
 function load(){try{var r=localStorage.getItem(KEY);if(r){var a=JSON.parse(r);if(Array.isArray(a))return a}}catch(e){}return SEED.slice()}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+var SHEET_URL='https://script.google.com/macros/s/AKfycbxXeud1GvaZM7CJiRHzw2uEuOUJWbuD-BFmvUCceif3e-BMbhB6go6X4SfTLzHE8dwr/exec';
+var pushing=false,again=false;
+function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
+function setStat(t,bad){var el=document.getElementById('stat');el.textContent=t;el.style.color=bad?'var(--warn)':'var(--mute)'}
+function call(action,payload){return fetch(SHEET_URL,{method:'POST',body:JSON.stringify({key:'',action:action,items:payload})}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}
+function norm(a){return a.map(function(x,n){return{id:x.id||Date.now()+n,name:String(x.name||''),type:x.type||'ทั่วไป',price:+x.price||0,cost:+x.cost||0,unit:x.unit||'ชิ้น',stock:parseInt(x.stock,10)||0,icon:x.icon||'🍪'}})}
+function push(){
+  if(pushing){again=true;return}
+  pushing=true;setStat('กำลังบันทึกลง Google Sheets...');
+  call('set',items).then(function(){setStat('ซิงก์ Google Sheets แล้ว')}).catch(function(e){setStat('บันทึกลงชีตไม่สำเร็จ: '+e.message,1)}).then(function(){pushing=false;if(again){again=false;push()}});
+}
+function pull(){
+  setStat('กำลังโหลดข้อมูลจากชีต...');
+  return call('get').then(function(d){
+    if(d.items.length){items=norm(d.items);saveLocal();render();setStat('ซิงก์ Google Sheets แล้ว')}
+    else{items=[];saveLocal();render();setStat('ชีตยังว่าง เพิ่มสินค้าเพื่อเริ่มต้น')}
+  }).catch(function(e){setStat('เชื่อมต่อชีตไม่สำเร็จ: '+e.message+' (ใช้ข้อมูลในเครื่องไปก่อน)',1)});
+}
+function save(){saveLocal();push()}
 function $(i){return document.getElementById(i)}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
 function baht(n){return Number(n).toLocaleString('th-TH',{maximumFractionDigits:2})}
