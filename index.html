@@ -97,6 +97,7 @@ tr:last-child td{border-bottom:0}
       <div class="live" id="live" aria-live="polite"></div>
       <div class="row"><button class="btn" type="submit" id="save">เพิ่มสินค้า</button><button class="btn ghost" type="button" id="cancel" hidden>ยกเลิกการแก้ไข</button></div>
     </form>
+    <input id="q" type="search" placeholder="🔍 ค้นหาสินค้า (ชื่อหรือชนิด)" style="margin-top:18px" aria-label="ค้นหาสินค้า">
     <div class="tw"><table>
       <thead><tr><th>ขนม</th><th>ชนิด</th><th class="n">ราคาขาย</th><th class="n">ต้นทุน</th><th class="n">กำไร/หน่วย</th><th class="n">กำไร %</th><th class="n">คงเหลือ</th><th></th></tr></thead>
       <tbody id="tb"></tbody>
@@ -165,7 +166,9 @@ tt.style.cssText='display:grid;grid-template-columns:repeat(auto-fit,minmax(180p
 var bx='background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--g);border-radius:14px;padding:12px 18px;box-shadow:var(--sh)';
 tt.innerHTML='<div style="'+bx+'"><div style="font-size:.85rem;color:var(--mute)">ต้นทุนทั้งหมด</div><div style="font-size:1.6rem;font-weight:600;color:var(--gd)">฿'+baht(val)+'</div></div><div style="'+bx+'"><div style="font-size:.85rem;color:var(--mute)">ขนมคงเหลือทั้งหมด</div><div style="font-size:1.6rem;font-weight:600;color:var(--gd)">'+pcs+' ชิ้น</div></div>';
   $('sum').innerHTML='<div><b>'+items.length+'</b><span>รายการขนม</span></div><div><b>฿'+baht(val)+'</b><span>มูลค่าต้นทุนที่มีในสต็อก</span></div><div><b>฿'+baht(tot)+'</b><span>กำไรถ้าขายหมดสต็อก</span></div>';
-  $('tb').innerHTML=items.length?items.map(function(i){
+  var qq=($('q').value||'').trim().toLowerCase();
+  var tl=items.filter(function(i){return !qq||(i.name+' '+i.type).toLowerCase().indexOf(qq)>=0});
+  $('tb').innerHTML=tl.length?tl.map(function(i){
     var p=i.price-i.cost,pc=i.price>0?p/i.price*100:0;
     return '<tr><td>'+i.icon+' '+esc(i.name)+'</td><td>'+esc(i.type)+'</td><td class="n">฿'+baht(i.price)+'</td><td class="n">฿'+baht(i.cost)+'</td><td class="n '+(p>=0?'good':'bad')+'">฿'+baht(p)+'</td><td class="n '+(p>=0?'good':'bad')+'">'+pc.toFixed(0)+'%</td><td class="n">'+i.stock+' '+esc(i.unit)+'</td><td class="n"><button class="btn ghost sm" data-e="'+i.id+'">แก้ไข</button> <button class="btn del sm" data-d="'+i.id+'">ลบ</button></td></tr>'}).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--mute)">ยังไม่มีสินค้า เริ่มเพิ่มขนมจากฟอร์มด้านบน</td></tr>';
 }
@@ -182,6 +185,7 @@ $('open').onclick=function(){
 };
 $('close').onclick=function(){$('dlg').close()};
 $('price').oninput=$('cost').oninput=live;
+$('q').oninput=function(){render()};
 $('cancel').onclick=reset;
 $('f').onsubmit=function(e){
   e.preventDefault();
