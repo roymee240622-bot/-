@@ -77,6 +77,7 @@ tr:last-child td{border-bottom:0}
     <h1>ขนมวางขายในออฟฟิศ</h1>
     <p class="stat" id="stat" aria-live="polite">กำลังโหลดข้อมูล...</p>
   </section>
+  <input id="sq" type="search" placeholder="🔍 ค้นหาขนม (ชื่อหรือชนิด)" aria-label="ค้นหาขนม" style="max-width:360px;margin-top:18px">
   <div class="chips" id="chips" role="group" aria-label="กรองตามชนิดขนม"></div>
   <div class="grid" id="grid"></div>
 </main>
@@ -155,7 +156,8 @@ function render(){
   var ts=['ทั้งหมด'].concat(types());
   if(ts.indexOf(filter)<0)filter='ทั้งหมด';
   $('chips').innerHTML=ts.map(function(t){return '<button class="chip" aria-pressed="'+(t===filter)+'" data-t="'+esc(t)+'">'+esc(t)+'</button>'}).join('');
-  var list=items.filter(function(i){return filter==='ทั้งหมด'||i.type===filter});
+  var sq=($('sq').value||'').trim().toLowerCase();
+  var list=items.filter(function(i){return (filter==='ทั้งหมด'||i.type===filter)&&(!sq||(i.name+' '+i.type).toLowerCase().indexOf(sq)>=0)});
   var emptyMsg=loaded?'ยังไม่มีขนมวางขายตอนนี้':'';
   $('grid').innerHTML=list.length?list.map(function(i){
     return '<article class="card'+(i.stock<=0?' out':'')+'"><div class="pic" aria-hidden="true">'+i.icon+'</div><div class="cb"><span class="tag">'+esc(i.type)+'</span><h3>'+esc(i.name)+'</h3><p>'+(i.stock>0?'เหลือ '+i.stock+' '+esc(i.unit):'สินค้าหมด')+'</p>'+(i.date?'<p>วางขาย '+fdate(i.date)+'</p>':'')+'<div class="price">฿'+baht(i.price)+' <small>/ '+esc(i.unit)+'</small></div></div></article>'}).join(''):(emptyMsg?'<div class="empty">'+emptyMsg+'</div>':'');
@@ -185,6 +187,7 @@ $('open').onclick=function(){
 };
 $('close').onclick=function(){$('dlg').close()};
 $('price').oninput=$('cost').oninput=live;
+$('sq').oninput=function(){render()};
 $('q').oninput=function(){render()};
 $('cancel').onclick=reset;
 $('f').onsubmit=function(e){
