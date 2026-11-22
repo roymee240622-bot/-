@@ -157,7 +157,9 @@ function render(){
   $('grid').innerHTML=list.length?list.map(function(i){
     return '<article class="card'+(i.stock<=0?' out':'')+'"><div class="pic" aria-hidden="true">'+i.icon+'</div><div class="cb"><span class="tag">'+esc(i.type)+'</span><h3>'+esc(i.name)+'</h3><p>'+(i.stock>0?'เหลือ '+i.stock+' '+esc(i.unit):'สินค้าหมด')+'</p><div class="price">฿'+baht(i.price)+' <small>/ '+esc(i.unit)+'</small></div></div></article>'}).join(''):(emptyMsg?'<div class="empty">'+emptyMsg+'</div>':'');
   $('types').innerHTML=types().map(function(t){return '<option value="'+esc(t)+'">'}).join('');
-  var tot=0,val=0;items.forEach(function(i){tot+=(i.price-i.cost)*i.stock;val+=i.cost*i.stock});
+  var tot=0,val=0,pcs=0;items.forEach(function(i){tot+=(i.price-i.cost)*i.stock;val+=i.cost*i.stock;pcs+=i.stock});
+var tt=$('totals');if(!tt){tt=document.createElement('p');tt.id='totals';tt.style.cssText='margin:8px 0 0;font-weight:500;color:var(--gd)';$('stat').insertAdjacentElement('afterend',tt)}
+tt.textContent='ต้นทุนทั้งหมด ฿'+baht(val)+' · ขนมคงเหลือทั้งหมด '+pcs+' ชิ้น';
   $('sum').innerHTML='<div><b>'+items.length+'</b><span>รายการขนม</span></div><div><b>฿'+baht(val)+'</b><span>มูลค่าต้นทุนที่มีในสต็อก</span></div><div><b>฿'+baht(tot)+'</b><span>กำไรถ้าขายหมดสต็อก</span></div>';
   $('tb').innerHTML=items.length?items.map(function(i){
     var p=i.price-i.cost,pc=i.price>0?p/i.price*100:0;
