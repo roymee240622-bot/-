@@ -176,7 +176,6 @@ function reset(){editId=null;$('f').reset();$('unit').value='ชิ้น';$('st
 $('icon').innerHTML=ICONS.map(function(i){return '<option>'+i+'</option>'}).join('');
 $('chips').onclick=function(e){var t=e.target.getAttribute('data-t');if(t){filter=t;render()}};
 $('open').onclick=function(){
-  if(!KEY){var k=prompt('ใส่รหัสแม่ค้า');if(!k)return;KEY=k.trim()}
   $('dlg').showModal();
 };
 $('close').onclick=function(){$('dlg').close()};
