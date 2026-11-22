@@ -25,10 +25,10 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .btn.ghost:hover{background:var(--gl)}
 .btn.sm{padding:5px 12px;font-size:.85rem}
 .btn.del{background:transparent;color:var(--warn);border:1.5px solid var(--line)}
-.hero{padding:44px 0 24px}
+.hero{padding:44px 0 8px}
 .hero h1{font-size:clamp(1.8rem,5vw,2.8rem);line-height:1.25;margin:0 0 10px;font-weight:600;max-width:16em}
-.hero p{margin:0;color:var(--mute);max-width:34em}
-.chips{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}
+.stat{margin:0;font-size:.85rem;color:var(--mute);min-height:1.4em}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0 22px}
 .chip{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 16px}
 .chip[aria-pressed="true"]{background:var(--g);border-color:var(--g);color:#fff}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:18px;padding-bottom:60px}
@@ -42,7 +42,6 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
 .price small{font-size:.8rem;color:var(--mute);font-weight:400}
 .out{opacity:.55}
 .empty{grid-column:1/-1;text-align:center;color:var(--mute);padding:40px 0}
-/* seller panel */
 dialog{border:0;border-radius:18px;padding:0;width:min(940px,calc(100% - 24px));max-height:calc(100% - 24px);background:var(--bg);color:var(--ink);box-shadow:0 20px 60px rgba(0,0,0,.3)}
 dialog::backdrop{background:rgba(10,30,18,.5)}
 .dh{display:flex;justify-content:space-between;align-items:center;padding:16px 22px;background:var(--g);color:#fff;position:sticky;top:0}
@@ -76,6 +75,7 @@ tr:last-child td{border-bottom:0}
 <main class="wrap">
   <section class="hero">
     <h1>ขนมวางขายในออฟฟิศ</h1>
+    <p class="stat" id="stat" aria-live="polite">กำลังโหลดข้อมูล...</p>
   </section>
   <div class="chips" id="chips" role="group" aria-label="กรองตามชนิดขนม"></div>
   <div class="grid" id="grid"></div>
@@ -104,47 +104,58 @@ tr:last-child td{border-bottom:0}
 </dialog>
 
 <script>
-var KEY='snack-shop-v1';
-var SEED=[
- {id:1,name:'ขนมครกใบเตย',type:'ขนมหวาน',price:25,cost:11,unit:'กล่อง',stock:20,icon:'🥥'},
- {id:2,name:'ฝอยทอง',type:'ขนมหวาน',price:30,cost:14,unit:'ห่อ',stock:15,icon:'🍯'},
- {id:3,name:'กล้วยทอด',type:'ของทอด',price:20,cost:8,unit:'ถุง',stock:30,icon:'🍌'},
- {id:4,name:'ข้าวเกรียบกุ้ง',type:'ขนมกรอบ',price:35,cost:17,unit:'ถุง',stock:0,icon:'🍘'},
- {id:5,name:'ขนมถ้วย',type:'ขนมนึ่ง',price:15,cost:6,unit:'ถ้วย',stock:40,icon:'🍮'}];
-var ICONS=['🥥','🍯','🍌','🍘','🍮','🍡','🍪','🥮','🍠','🍰'];
-var items=load(),filter='ทั้งหมด',editId=null;
-function load(){try{var r=localStorage.getItem(KEY);if(r){var a=JSON.parse(r);if(Array.isArray(a))return a}}catch(e){}return SEED.slice()}
+/* ===== ตั้งค่า: URL ของ Google Apps Script (ลงท้ายด้วย /exec) ===== */
 var SHEET_URL='https://script.google.com/macros/s/AKfycbz2hzhfuQxoSCbdVZ13EJ82YoHEzJ06T1TkNwqdSlF0-JVBA7JTOtB5Qpm6vJUauKuV/exec';
+/* ================================================================== */
+var CACHE='snack-shop-cache-v1';
+var ICONS=['🥥','🍯','🍌','🍘','🍮','🍡','🍪','🥮','🍠','🍰'];
+var items=loadLocal(),filter='ทั้งหมด',editId=null,loaded=false,KEY='';
 var pushing=false,again=false;
-function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
-function setStat(t,bad){var el=document.getElementById('stat');el.textContent=t;el.style.color=bad?'var(--warn)':'var(--mute)'}
-function call(action,payload){return fetch(SHEET_URL,{method:'POST',body:JSON.stringify({key:'',action:action,items:payload})}).then(function(r){return r.json()}).then(function(d){if(d.error)throw new Error(d.error);return d})}
-function norm(a){return a.map(function(x,n){return{id:x.id||Date.now()+n,name:String(x.name||''),type:x.type||'ทั่วไป',price:+x.price||0,cost:+x.cost||0,unit:x.unit||'ชิ้น',stock:parseInt(x.stock,10)||0,icon:x.icon||'🍪'}})}
-function push(){
-  if(pushing){again=true;return}
-  pushing=true;setStat('กำลังบันทึกลง Google Sheets...');
-  call('set',items).then(function(){setStat('ซิงก์ Google Sheets แล้ว')}).catch(function(e){setStat('บันทึกลงชีตไม่สำเร็จ: '+e.message,1)}).then(function(){pushing=false;if(again){again=false;push()}});
+function $(i){return document.getElementById(i)}
+function setStat(t,bad){var el=$('stat');if(!el)return;el.textContent=t;el.style.color=bad?'var(--warn)':'var(--mute)'}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
+function baht(n){return Number(n).toLocaleString('th-TH',{maximumFractionDigits:2})}
+function types(){var t=[];items.forEach(function(i){if(t.indexOf(i.type)<0)t.push(i.type)});return t}
+function norm(a){return (Array.isArray(a)?a:[]).map(function(x,n){return{id:x.id||Date.now()+n,name:String(x.name||''),type:x.type||'ทั่วไป',price:+x.price||0,cost:+x.cost||0,unit:x.unit||'ชิ้น',stock:parseInt(x.stock,10)||0,icon:x.icon||'🍪'}})}
+function loadLocal(){try{var r=localStorage.getItem(CACHE);if(r){var a=JSON.parse(r);if(Array.isArray(a))return norm(a)}}catch(e){}return []}
+function saveLocal(){try{localStorage.setItem(CACHE,JSON.stringify(items))}catch(e){}}
+
+/* ติดต่อ Google Apps Script (ส่งเป็น text/plain เพื่อไม่ให้ติด CORS preflight) */
+function call(action,payload){
+  return fetch(SHEET_URL,{method:'POST',body:JSON.stringify({key:KEY,action:action,items:payload})})
+    .then(function(r){return r.json()})
+    .then(function(d){if(d.error)throw new Error(d.error);return d});
 }
 function pull(){
   setStat('กำลังโหลดข้อมูลจากชีต...');
   return call('get').then(function(d){
-    if(d.items.length){items=norm(d.items);saveLocal();render();setStat('ซิงก์ Google Sheets แล้ว')}
-    else{items=[];saveLocal();render();setStat('ชีตยังว่าง เพิ่มสินค้าเพื่อเริ่มต้น')}
-  }).catch(function(e){setStat('เชื่อมต่อชีตไม่สำเร็จ: '+e.message+' (ใช้ข้อมูลในเครื่องไปก่อน)',1)});
+    items=norm(d.items);loaded=true;saveLocal();render();setStat('');
+  }).catch(function(e){
+    loaded=true;render();
+    setStat('เชื่อมต่อชีตไม่สำเร็จ: '+e.message+(items.length?' (แสดงข้อมูลที่เก็บในเครื่อง)':''),1);
+  });
+}
+function push(){
+  if(pushing){again=true;return}
+  pushing=true;setStat('กำลังบันทึกลง Google Sheets...');
+  call('set',items).then(function(){setStat('บันทึกแล้ว')}).catch(function(e){
+    if(String(e.message).indexOf('รหัส')>=0){
+      KEY='';$('dlg').close();
+      alert('รหัสไม่ถูกต้อง ไม่ได้บันทึกข้อมูล');
+      pull();
+    }else setStat('บันทึกลงชีตไม่สำเร็จ: '+e.message,1);
+  }).then(function(){pushing=false;if(again){again=false;push()}});
 }
 function save(){saveLocal();push()}
-function $(i){return document.getElementById(i)}
-function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]})}
-function baht(n){return Number(n).toLocaleString('th-TH',{maximumFractionDigits:2})}
-function types(){var t=[];items.forEach(function(i){if(t.indexOf(i.type)<0)t.push(i.type)});return t}
 
 function render(){
   var ts=['ทั้งหมด'].concat(types());
   if(ts.indexOf(filter)<0)filter='ทั้งหมด';
   $('chips').innerHTML=ts.map(function(t){return '<button class="chip" aria-pressed="'+(t===filter)+'" data-t="'+esc(t)+'">'+esc(t)+'</button>'}).join('');
   var list=items.filter(function(i){return filter==='ทั้งหมด'||i.type===filter});
+  var emptyMsg=loaded?'ยังไม่มีขนมวางขายตอนนี้':'';
   $('grid').innerHTML=list.length?list.map(function(i){
-    return '<article class="card'+(i.stock<=0?' out':'')+'"><div class="pic" aria-hidden="true">'+i.icon+'</div><div class="cb"><span class="tag">'+esc(i.type)+'</span><h3>'+esc(i.name)+'</h3><p>'+(i.stock>0?'เหลือ '+i.stock+' '+esc(i.unit):'สินค้าหมด')+'</p><div class="price">฿'+baht(i.price)+' <small>/ '+esc(i.unit)+'</small></div></div></article>'}).join(''):'<div class="empty">ยังไม่มีขนมในหมวดนี้ กด “จัดการสินค้า” เพื่อเพิ่มขนม</div>';
+    return '<article class="card'+(i.stock<=0?' out':'')+'"><div class="pic" aria-hidden="true">'+i.icon+'</div><div class="cb"><span class="tag">'+esc(i.type)+'</span><h3>'+esc(i.name)+'</h3><p>'+(i.stock>0?'เหลือ '+i.stock+' '+esc(i.unit):'สินค้าหมด')+'</p><div class="price">฿'+baht(i.price)+' <small>/ '+esc(i.unit)+'</small></div></div></article>'}).join(''):(emptyMsg?'<div class="empty">'+emptyMsg+'</div>':'');
   $('types').innerHTML=types().map(function(t){return '<option value="'+esc(t)+'">'}).join('');
   var tot=0,val=0;items.forEach(function(i){tot+=(i.price-i.cost)*i.stock;val+=i.cost*i.stock});
   $('sum').innerHTML='<div><b>'+items.length+'</b><span>รายการขนม</span></div><div><b>฿'+baht(val)+'</b><span>มูลค่าต้นทุนที่มีในสต็อก</span></div><div><b>฿'+baht(tot)+'</b><span>กำไรถ้าขายหมดสต็อก</span></div>';
@@ -160,7 +171,10 @@ function reset(){editId=null;$('f').reset();$('unit').value='ชิ้น';$('st
 
 $('icon').innerHTML=ICONS.map(function(i){return '<option>'+i+'</option>'}).join('');
 $('chips').onclick=function(e){var t=e.target.getAttribute('data-t');if(t){filter=t;render()}};
-$('open').onclick=function(){$('dlg').showModal()};
+$('open').onclick=function(){
+  if(!KEY){var k=prompt('ใส่รหัสแม่ค้า');if(!k)return;KEY=k.trim()}
+  $('dlg').showModal();
+};
 $('close').onclick=function(){$('dlg').close()};
 $('price').oninput=$('cost').oninput=live;
 $('cancel').onclick=reset;
@@ -173,12 +187,14 @@ $('f').onsubmit=function(e){
 };
 $('tb').onclick=function(e){
   var d=e.target.getAttribute('data-d'),ed=e.target.getAttribute('data-e');
-  if(d){items=items.filter(function(i){return String(i.id)!==d});save();render()}
+  if(d){if(!confirm('ลบรายการนี้?'))return;items=items.filter(function(i){return String(i.id)!==d});save();render()}
   if(ed){var i=items.filter(function(x){return String(x.id)===ed})[0];if(!i)return;
     editId=i.id;$('name').value=i.name;$('type').value=i.type;$('price').value=i.price;$('cost').value=i.cost;$('unit').value=i.unit;$('stock').value=i.stock;$('icon').value=i.icon;
     $('save').textContent='บันทึกการแก้ไข';$('cancel').hidden=false;live();$('name').focus()}
 };
+
 render();
+pull();
 </script>
 </body>
 </html>
