@@ -114,7 +114,7 @@ var SEED=[
 var ICONS=['🥥','🍯','🍌','🍘','🍮','🍡','🍪','🥮','🍠','🍰'];
 var items=load(),filter='ทั้งหมด',editId=null;
 function load(){try{var r=localStorage.getItem(KEY);if(r){var a=JSON.parse(r);if(Array.isArray(a))return a}}catch(e){}return SEED.slice()}
-var SHEET_URL='https://script.google.com/macros/s/AKfycbxXeud1GvaZM7CJiRHzw2uEuOUJWbuD-BFmvUCceif3e-BMbhB6go6X4SfTLzHE8dwr/exec';
+var SHEET_URL='https://script.google.com/macros/s/AKfycbz2hzhfuQxoSCbdVZ13EJ82YoHEzJ06T1TkNwqdSlF0-JVBA7JTOtB5Qpm6vJUauKuV/exec';
 var pushing=false,again=false;
 function saveLocal(){try{localStorage.setItem(KEY,JSON.stringify(items))}catch(e){}}
 function setStat(t,bad){var el=document.getElementById('stat');el.textContent=t;el.style.color=bad?'var(--warn)':'var(--mute)'}
