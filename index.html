@@ -208,6 +208,87 @@ $('tb').onclick=function(e){
 render();
 pull();
 </script>
-<script src="sales.js"></script>
+<script>
+(function(){
+var SC='snack-sales-cache-v1',sales=[],sellId=null;
+try{sales=JSON.parse(localStorage.getItem(SC))||[]}catch(e){}
+function two(n){return('0'+n).slice(-2)}
+function ymd(d){return d.getFullYear()+'-'+two(d.getMonth()+1)+'-'+two(d.getDate())}
+function saveS(){try{localStorage.setItem(SC,JSON.stringify(sales))}catch(e){}}
+function ns(a){return(Array.isArray(a)?a:[]).map(function(s){return{id:String(s.id),date:String(s.date).slice(0,10),itemId:String(s.itemId),name:String(s.name),icon:s.icon||'🍪',unit:s.unit||'ชิ้น',qty:+s.qty||0,price:+s.price||0,cost:+s.cost||0}})}
+function warn(e){setStat('บันทึกประวัติขายลงชีตไม่สำเร็จ: '+e.message,1)}
+
+document.body.insertAdjacentHTML('beforeend',
+'<dialog id="sd" style="width:min(380px,calc(100% - 24px))"><div class="dh"><h2 id="sdt">บันทึกการขาย</h2><button class="x" id="sdx" aria-label="ปิด">×</button></div><div class="db"><form id="sf" style="grid-template-columns:1fr">'+
+'<div class="live" id="sinfo"></div><label>ขายกี่ชิ้น<input id="sqty" type="number" min="1" step="1" value="1" required></label>'+
+'<label>วันที่ขาย<input id="sdate" type="date" required></label><div class="live" id="stot"></div>'+
+'<div class="row"><button class="btn" type="submit">บันทึกการขาย</button></div></form></div></dialog>'+
+'<dialog id="hd"><div class="dh"><h2>ประวัติการขาย</h2><button class="x" id="hdx" aria-label="ปิด">×</button></div><div class="db">'+
+'<div class="sum" id="hsum"></div><p class="stat" id="hbest"></p>'+
+'<input id="hq" type="search" placeholder="🔍 ค้นหาตามชื่อขนม" aria-label="ค้นหาประวัติ" style="margin-top:12px">'+
+'<div class="tw"><table><thead><tr><th>วันที่</th><th>ขนม</th><th class="n">จำนวน</th><th class="n">ราคา</th><th class="n">ยอดขาย</th><th class="n">กำไร</th><th></th></tr></thead><tbody id="htb"></tbody></table></div></div></dialog>');
+document.querySelector('#dlg .db').insertAdjacentHTML('afterbegin','<button class="btn ghost sm" id="hb" style="margin-bottom:12px">📒 ประวัติการขาย</button>');
+
+function find(id){return items.filter(function(i){return String(i.id)===String(id)})[0]}
+function sinfo(){
+  var it=find(sellId),q=parseInt($('sqty').value,10)||0;if(!it)return;
+  $('sinfo').textContent=it.icon+' '+it.name+' — ราคา ฿'+baht(it.price)+' / '+it.unit+' (เหลือ '+it.stock+')';
+  $('stot').textContent=q>0?'ยอดขาย ฿'+baht(it.price*q)+' · กำไร ฿'+baht((it.price-it.cost)*q):'';
+}
+function drawH(){
+  var t=ymd(new Date()),w=new Date();w.setDate(w.getDate()-6);w=ymd(w);var m=t.slice(0,7);
+  function sum(f){var r=0,p=0;sales.forEach(function(s){if(f(s)){r+=s.price*s.qty;p+=(s.price-s.cost)*s.qty}});return[r,p]}
+  var d=sum(function(s){return s.date===t}),wk=sum(function(s){return s.date>=w}),mo=sum(function(s){return s.date.slice(0,7)===m});
+  function box(l,x){return'<div><b>฿'+baht(x[0])+'</b><span>'+l+' · กำไร ฿'+baht(x[1])+'</span></div>'}
+  $('hsum').innerHTML=box('วันนี้',d)+box('7 วันล่าสุด',wk)+box('เดือนนี้',mo);
+  var q=($('hq').value||'').trim().toLowerCase();
+  var list=sales.filter(function(s){return!q||s.name.toLowerCase().indexOf(q)>=0}).sort(function(a,b){return a.date<b.date?1:a.date>b.date?-1:(+b.id)-(+a.id)});
+  var cnt={};list.forEach(function(s){cnt[s.name]=(cnt[s.name]||0)+s.qty});
+  var top=Object.keys(cnt).sort(function(a,b){return cnt[b]-cnt[a]}).slice(0,3);
+  $('hbest').textContent=top.length?'🏆 ขายดี: '+top.map(function(n){return n+' ('+cnt[n]+')'}).join(' · '):'';
+  $('htb').innerHTML=list.length?list.map(function(s){var p=(s.price-s.cost)*s.qty;
+    return'<tr><td>'+fdate(s.date)+'</td><td>'+s.icon+' '+esc(s.name)+'</td><td class="n">'+s.qty+' '+esc(s.unit)+'</td><td class="n">฿'+baht(s.price)+'</td><td class="n">฿'+baht(s.price*s.qty)+'</td><td class="n '+(p>=0?'good':'bad')+'">฿'+baht(p)+'</td><td class="n"><button class="btn del sm" data-sd="'+esc(s.id)+'">ลบ</button></td></tr>'}).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--mute)">ยังไม่มีประวัติการขาย</td></tr>';
+}
+function addBtns(){
+  Array.prototype.forEach.call(document.querySelectorAll('#tb button[data-e]'),function(b){
+    var s=document.createElement('button');s.className='btn sm';s.setAttribute('data-s',b.getAttribute('data-e'));s.textContent='ขาย';
+    b.parentNode.insertBefore(s,b);b.parentNode.insertBefore(document.createTextNode(' '),b);
+  });
+}
+var r0=render;
+render=function(){r0();addBtns();if($('hd').open)drawH()};
+
+$('tb').addEventListener('click',function(e){
+  var id=e.target.getAttribute('data-s');if(!id)return;
+  var it=find(id);if(!it)return;
+  if(it.stock<=0){alert('⚠️ '+it.name+' หมดสต็อกแล้ว ไม่สามารถบันทึกการขายได้');return}
+  sellId=id;$('sqty').value=1;$('sdate').value=ymd(new Date());sinfo();$('sd').showModal();$('sqty').select();
+});
+$('sqty').oninput=sinfo;
+$('sdx').onclick=function(){$('sd').close()};
+$('sf').onsubmit=function(e){
+  e.preventDefault();
+  var it=find(sellId),q=parseInt($('sqty').value,10);
+  if(!it||!(q>0))return;
+  if(q>it.stock){alert('⚠️ ขายเกินสต็อก!\n'+it.name+' เหลือเพียง '+it.stock+' '+it.unit+' แต่กรอก '+q);return}
+  var s={id:String(Date.now()),date:$('sdate').value,itemId:String(it.id),name:it.name,icon:it.icon,unit:it.unit,qty:q,price:it.price,cost:it.cost};
+  it.stock-=q;sales.push(s);saveS();save();render();$('sd').close();
+  call('addSale',[s]).then(function(){setStat('บันทึกการขายแล้ว')}).catch(warn);
+};
+$('hb').onclick=function(){drawH();$('hd').showModal()};
+$('hdx').onclick=function(){$('hd').close()};
+$('hq').oninput=drawH;
+$('htb').onclick=function(e){
+  var id=e.target.getAttribute('data-sd');if(!id)return;
+  var s=sales.filter(function(x){return x.id===id})[0];if(!s)return;
+  if(!confirm('ลบรายการขาย '+s.name+' x'+s.qty+' ? (จะคืนสต็อกให้)'))return;
+  var it=find(s.itemId);if(it){it.stock+=s.qty;save()}
+  sales=sales.filter(function(x){return x.id!==id});saveS();render();drawH();
+  call('deleteSale',[{id:id}]).catch(warn);
+};
+call('getSales').then(function(d){sales=ns(d.items);saveS();render()}).catch(function(e){setStat('โหลดประวัติขายไม่สำเร็จ: '+e.message,1)});
+render();
+})();
+</script>
 </body>
 </html>
