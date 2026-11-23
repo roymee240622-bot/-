@@ -160,7 +160,7 @@ function render(){
   var list=items.filter(function(i){return (filter==='ทั้งหมด'||i.type===filter)&&(!sq||(i.name+' '+i.type).toLowerCase().indexOf(sq)>=0)});
   var emptyMsg=loaded?'ยังไม่มีขนมวางขายตอนนี้':'';
   $('grid').innerHTML=list.length?list.map(function(i){
-    return '<article class="card'+(i.stock<=0?' out':'')+'"><div class="pic" aria-hidden="true">'+i.icon+'</div><div class="cb"><span class="tag">'+esc(i.type)+'</span><h3>'+esc(i.name)+'</h3><p>'+(i.stock>0?'เหลือ '+i.stock+' '+esc(i.unit):'สินค้าหมด')+'</p>'+(i.date?'<p>วางขาย '+fdate(i.date)+'</p>':'')+'<div class="price">฿'+baht(i.price)+' <small>/ '+esc(i.unit)+'</small></div></div></article>'}).join(''):(emptyMsg?'<div class="empty">'+emptyMsg+'</div>':'');
+    return '<article class="card'+(i.stock<=0?' out':'')+'"><div class="pic" aria-hidden="true">'+i.icon+'</div><div class="cb"><span class="tag">'+esc(i.type)+'</span><h3>'+esc(i.name)+'</h3><p>'+(i.stock>0?'เหลือ '+i.stock+' '+esc(i.unit):'สินค้าหมด')+'</p>'+(i.date?'<p>วางขาย '+fdate(i.date)+'</p>':'')+'<div class="price">฿'+baht(i.price)+' <small>/ '+esc(i.unit)+'</small></div><button class="btn sm" data-s="'+i.id+'" style="margin-top:12px;width:100%"'+(i.stock<=0?' disabled':'')+'>🛒 ขาย</button></div></article>'}).join(''):(emptyMsg?'<div class="empty">'+emptyMsg+'</div>':'');
   $('types').innerHTML=types().map(function(t){return '<option value="'+esc(t)+'">'}).join('');
   var tot=0,val=0,pcs=0;items.forEach(function(i){tot+=(i.price-i.cost)*i.stock;val+=i.cost*i.stock;pcs+=i.stock});
 var tt=$('totals');if(!tt){tt=document.createElement('div');tt.id='totals';$('stat').insertAdjacentElement('afterend',tt)}
@@ -258,12 +258,14 @@ function addBtns(){
 var r0=render;
 render=function(){r0();addBtns();if($('hd').open)drawH()};
 
-$('tb').addEventListener('click',function(e){
+function openSell(e){
   var id=e.target.getAttribute('data-s');if(!id)return;
   var it=find(id);if(!it)return;
   if(it.stock<=0){alert('⚠️ '+it.name+' หมดสต็อกแล้ว ไม่สามารถบันทึกการขายได้');return}
   sellId=id;$('sqty').value=1;$('sdate').value=ymd(new Date());sinfo();$('sd').showModal();$('sqty').select();
-});
+}
+$('tb').addEventListener('click',openSell);
+$('grid').addEventListener('click',openSell);
 $('sqty').oninput=sinfo;
 $('sdx').onclick=function(){$('sd').close()};
 $('sf').onsubmit=function(e){
