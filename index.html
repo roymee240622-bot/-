@@ -264,7 +264,7 @@ function addLast(){
     var id=b.getAttribute('data-s'),last='';
     sales.forEach(function(s){if(s.itemId===id&&s.date>last)last=s.date});
     var p=document.createElement('p');
-    p.textContent=last?'ขายล่าสุด '+fdate(last):'ยังไม่เคยขาย';
+    p.textContent=last?'ขายล่าสุด '+fdate(last):'ยังขายไม่ได้';
     b.parentNode.insertBefore(p,b.parentNode.querySelector('.price'));
   });
 }
