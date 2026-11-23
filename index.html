@@ -259,8 +259,17 @@ function addBtns(){
     b.parentNode.insertBefore(s,b);b.parentNode.insertBefore(document.createTextNode(' '),b);
   });
 }
+function addLast(){
+  Array.prototype.forEach.call(document.querySelectorAll('#grid button[data-s]'),function(b){
+    var id=b.getAttribute('data-s'),last='';
+    sales.forEach(function(s){if(s.itemId===id&&s.date>last)last=s.date});
+    var p=document.createElement('p');
+    p.textContent=last?'ขายล่าสุด '+fdate(last):'ยังไม่เคยขาย';
+    b.parentNode.insertBefore(p,b.parentNode.querySelector('.price'));
+  });
+}
 var r0=render;
-render=function(){r0();addBtns();if($('hd').open)drawH()};
+render=function(){r0();addBtns();addLast();if($('hd').open)drawH()};
 
 function openSell(e){
   var id=e.target.getAttribute('data-s');if(!id)return;
