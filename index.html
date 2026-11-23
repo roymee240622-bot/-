@@ -320,7 +320,7 @@ $('grid').addEventListener('click',function(e){
   if(n){var it=find(n);if(it&&confirm('ลบรูปของ '+it.name+' กลับไปใช้ไอคอนเดิม?')){it.img='';save();render()}}
 });
 var r0=render;
-render=function(){r0();addBtns();addLast();addProfit();if($('hd').open)drawH()};
+render=function(){r0();addBtns();addLast();addProfit();addPic();if($('hd').open)drawH()};
 
 function openSell(e){
   var id=e.target.getAttribute('data-s');if(!id)return;
