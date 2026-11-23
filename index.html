@@ -268,8 +268,17 @@ function addLast(){
     b.parentNode.insertBefore(p,b.parentNode.querySelector('.price'));
   });
 }
+function addProfit(){
+  var tt=$('totals');if(!tt)return;
+  var pf=0;sales.forEach(function(s){pf+=(s.price-s.cost)*s.qty});
+  tt.style.maxWidth='780px';
+  var d=document.createElement('div');
+  d.style.cssText='background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--g);border-radius:14px;padding:12px 18px;box-shadow:var(--sh)';
+  d.innerHTML='<div style="font-size:.85rem;color:var(--mute)">กำไรตั้งแต่ขายมา</div><div style="font-size:1.6rem;font-weight:600;color:'+(pf>=0?'var(--gd)':'var(--warn)')+'">฿'+baht(pf)+'</div>';
+  tt.appendChild(d);
+}
 var r0=render;
-render=function(){r0();addBtns();addLast();if($('hd').open)drawH()};
+render=function(){r0();addBtns();addLast();addProfit();if($('hd').open)drawH()};
 
 function openSell(e){
   var id=e.target.getAttribute('data-s');if(!id)return;
