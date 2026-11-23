@@ -227,7 +227,11 @@ document.body.insertAdjacentHTML('beforeend',
 '<div class="sum" id="hsum"></div><p class="stat" id="hbest"></p>'+
 '<input id="hq" type="search" placeholder="🔍 ค้นหาตามชื่อขนม" aria-label="ค้นหาประวัติ" style="margin-top:12px">'+
 '<div class="tw"><table><thead><tr><th>วันที่</th><th>ขนม</th><th class="n">จำนวน</th><th class="n">ราคา</th><th class="n">ยอดขาย</th><th class="n">กำไร</th><th></th></tr></thead><tbody id="htb"></tbody></table></div></div></dialog>');
-document.querySelector('#dlg .db').insertAdjacentHTML('afterbegin','<button class="btn ghost sm" id="hb" style="margin-bottom:12px">📒 ประวัติการขาย</button>');
+var ob=$('open'),bw=document.createElement('div');
+bw.style.cssText='display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end';
+ob.parentNode.insertBefore(bw,ob);
+bw.appendChild(ob);
+bw.insertAdjacentHTML('beforeend','<button class="btn ghost" id="hb">📒 ประวัติการขาย</button>');
 
 function find(id){return items.filter(function(i){return String(i.id)===String(id)})[0]}
 function sinfo(){
