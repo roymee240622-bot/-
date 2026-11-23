@@ -120,7 +120,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;
 function baht(n){return Number(n).toLocaleString('th-TH',{maximumFractionDigits:2})}
 function fdate(d){try{return new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'numeric'})}catch(e){return d}}
 function types(){var t=[];items.forEach(function(i){if(t.indexOf(i.type)<0)t.push(i.type)});return t}
-function norm(a){return (Array.isArray(a)?a:[]).map(function(x,n){return{id:x.id||Date.now()+n,name:String(x.name||''),type:x.type||'ทั่วไป',price:+x.price||0,cost:+x.cost||0,unit:x.unit||'ชิ้น',stock:parseInt(x.stock,10)||0,icon:x.icon||'🍪',date:x.date?String(x.date).slice(0,10):''}})}
+function norm(a){return (Array.isArray(a)?a:[]).map(function(x,n){return{id:x.id||Date.now()+n,name:String(x.name||''),type:x.type||'ทั่วไป',price:+x.price||0,cost:+x.cost||0,unit:x.unit||'ชิ้น',stock:parseInt(x.stock,10)||0,icon:x.icon||'🍪',date:x.date?String(x.date).slice(0,10):'',img:x.img||''}})}
 function loadLocal(){try{var r=localStorage.getItem(CACHE);if(r){var a=JSON.parse(r);if(Array.isArray(a))return norm(a)}}catch(e){}return []}
 function saveLocal(){try{localStorage.setItem(CACHE,JSON.stringify(items))}catch(e){}}
 
@@ -193,7 +193,7 @@ $('cancel').onclick=reset;
 $('f').onsubmit=function(e){
   e.preventDefault();
   var o={name:$('name').value.trim(),type:$('type').value.trim(),price:parseFloat($('price').value),cost:parseFloat($('cost').value),unit:$('unit').value.trim()||'ชิ้น',stock:parseInt($('stock').value,10)||0,icon:$('icon').value,date:$('date').value};
-  if(editId){items=items.map(function(i){return i.id===editId?Object.assign({id:editId},o):i})}
+  if(editId){items=items.map(function(i){return i.id===editId?Object.assign({id:editId,img:i.img},o):i})}
   else{o.id=Date.now();items.push(o)}
   save();reset();render();
 };
@@ -277,6 +277,48 @@ function addProfit(){
   d.innerHTML='<div style="font-size:.85rem;color:var(--mute)">กำไรตั้งแต่ขายมา</div><div style="font-size:1.6rem;font-weight:600;color:'+(pf>=0?'var(--gd)':'var(--warn)')+'">฿'+baht(pf)+'</div>';
   tt.appendChild(d);
 }
+var fi=document.createElement('input');fi.type='file';fi.accept='image/*';fi.hidden=true;document.body.appendChild(fi);
+var picId=null;
+function shrink(file,cb){
+  var r=new FileReader();
+  r.onload=function(){
+    var im=new Image();
+    im.onload=function(){
+      var k=Math.min(1,320/Math.max(im.width,im.height)),c=document.createElement('canvas');
+      c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      var q=.8,u=c.toDataURL('image/jpeg',q);
+      while(u.length>45000&&q>.3){q-=.1;u=c.toDataURL('image/jpeg',q)}
+      cb(u.length>45000?null:u);
+    };
+    im.onerror=function(){cb(null)};
+    im.src=r.result;
+  };
+  r.readAsDataURL(file);
+}
+fi.onchange=function(){
+  var f=fi.files[0];fi.value='';if(!f||!picId)return;
+  shrink(f,function(u){
+    var it=find(picId);if(!it)return;
+    if(!u){alert('⚠️ ใช้รูปนี้ไม่ได้ ลองรูปอื่น');return}
+    it.img=u;save();render();
+  });
+};
+function addPic(){
+  Array.prototype.forEach.call(document.querySelectorAll('#grid button[data-s]'),function(b){
+    var it=find(b.getAttribute('data-s')),pic=b.closest('.card').querySelector('.pic');
+    if(!it||!pic)return;
+    pic.removeAttribute('aria-hidden');pic.style.position='relative';pic.style.overflow='hidden';
+    if(it.img)pic.innerHTML='<img src="'+it.img+'" alt="'+esc(it.name)+'" style="width:100%;height:100%;object-fit:cover">';
+    var st='position:absolute;top:8px;width:32px;height:32px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:15px;line-height:1;padding:0;';
+    pic.insertAdjacentHTML('beforeend','<button style="'+st+'right:8px" data-pen="'+it.id+'" aria-label="เปลี่ยนรูป">✏️</button>'+(it.img?'<button style="'+st+'right:46px" data-nopic="'+it.id+'" aria-label="ลบรูป">🗑</button>':''));
+  });
+}
+$('grid').addEventListener('click',function(e){
+  var p=e.target.getAttribute('data-pen'),n=e.target.getAttribute('data-nopic');
+  if(p){picId=p;fi.click()}
+  if(n){var it=find(n);if(it&&confirm('ลบรูปของ '+it.name+' กลับไปใช้ไอคอนเดิม?')){it.img='';save();render()}}
+});
 var r0=render;
 render=function(){r0();addBtns();addLast();addProfit();if($('hd').open)drawH()};
 
