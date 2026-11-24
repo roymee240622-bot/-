@@ -319,8 +319,22 @@ $('grid').addEventListener('click',function(e){
   if(p){picId=p;fi.click()}
   if(n){var it=find(n);if(it&&confirm('ลบรูปของ '+it.name+' กลับไปใช้ไอคอนเดิม?')){it.img='';save();render()}}
 });
+function moveStock(){
+  Array.prototype.forEach.call(document.querySelectorAll('#grid .cb'),function(cb){
+    var tag=cb.querySelector('.tag'),ps=cb.querySelectorAll('p'),sp=null;
+    Array.prototype.forEach.call(ps,function(p){if(/^(เหลือ|สินค้าหมด)/.test(p.textContent))sp=p});
+    if(!tag||!sp)return;
+    var out=sp.textContent.indexOf('สินค้าหมด')===0;
+    var row=document.createElement('div');
+    row.style.cssText='display:flex;justify-content:space-between;align-items:center;gap:8px';
+    sp.style.cssText='margin:0;font-size:1rem;font-weight:600;white-space:nowrap;color:'+(out?'var(--warn)':'var(--gd)');
+    cb.insertBefore(row,tag);
+    row.appendChild(tag);
+    row.appendChild(sp);
+  });
+}
 var r0=render;
-render=function(){r0();addBtns();addLast();addProfit();addPic();if($('hd').open)drawH()};
+render=function(){r0();addBtns();addLast();addProfit();addPic();moveStock();if($('hd').open)drawH()};
 
 function openSell(e){
   var id=e.target.getAttribute('data-s');if(!id)return;
